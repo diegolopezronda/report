@@ -1,0 +1,52 @@
+name: "Generar Reporte de Sprint"
+
+on:
+  workflow_dispatch:
+    inputs:
+      AX_PROJECT_KEY:
+        description: "ID del proyecto en JIRA"
+        required: true
+        type: string
+      AX_API_HOST:
+        description: "Host de la API JIRA"
+        required: true
+        type: string
+      AX_API_USER:
+        description: "Usuario de la API JIRA"
+        required: true
+        type: string
+      AX_API_TOKEN:
+        description: "Token de la API JIRA"
+        required: true
+        type: string
+jobs:
+  write-env:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener repo
+        uses: actions/checkout@v4.2.2
+      - name: Configurar permisos
+        run: chmod +x ./build.sh
+      - name: Configurar entorno
+        run: |
+          echo "AX_PROJECT_KEY=${{ inputs.AX_PROJECT_KEY }}" >> $GITHUB_ENV
+          echo "AX_API_HOST=${{ inputs.AX_API_HOST }}" >> $GITHUB_ENV
+          echo "AX_API_USER=${{ inputs.AX_API_USER }}" >> $GITHUB_ENV
+          echo "AX_API_TOKEN=${{ inputs.AX_API_TOKEN }}" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=${{ inputs.AX_PROJECT_KEY }}-sprint-plan" >> $GITHUB_ENV
+      - name: Instalar dependencias
+        run: |
+          sudo apt-get update
+          sudo apt-get install texlive-latex-recommended texlive-latex-extra python3 latexmk texlive-xetex
+          pip3 install pytz requests
+      - name: Generar reporte
+        run: |
+          ./build.sh $AX_PROJECT_KEY
+      - name: Renombrar reporte
+        run: |
+          mv book.pdf "$ARTIFACT_NAME.pdf"
+      - name: Publicar reporte
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.ARTIFACT_NAME }}.pdf
